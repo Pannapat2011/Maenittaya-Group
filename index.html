@@ -1299,7 +1299,7 @@
             <div class="unit-row">
                 <input type="number" id="in-qty" placeholder="0" min="0" step="any" inputmode="decimal" oninput="unitPreview('in')" onkeydown="if(event.key==='Enter') receiveItem()">
                 <div class="seg unit-seg" id="in-unit" role="group" aria-label="หน่วย">
-                    <button type="button" class="seg-btn active" data-u="pc">แพ็ค</button><button type="button" class="seg-btn" data-u="kg">กก.</button><button type="button" class="seg-btn" data-u="ton">ตัน</button>
+                    <button type="button" class="seg-btn active" data-u="pc">แพ็ค</button><button type="button" class="seg-btn" data-u="kg">กก.</button>
                 </div>
             </div>
             <div class="unit-conv" id="in-conv"></div>
@@ -1334,7 +1334,7 @@
             <div class="unit-row">
                 <input type="number" id="out-qty" placeholder="0" min="0" step="any" inputmode="decimal" oninput="unitPreview('out')" onkeydown="if(event.key==='Enter') issueItem()">
                 <div class="seg unit-seg" id="out-unit" role="group" aria-label="หน่วย">
-                    <button type="button" class="seg-btn active" data-u="pc">แพ็ค</button><button type="button" class="seg-btn" data-u="kg">กก.</button><button type="button" class="seg-btn" data-u="ton">ตัน</button>
+                    <button type="button" class="seg-btn active" data-u="pc">แพ็ค</button><button type="button" class="seg-btn" data-u="kg">กก.</button>
                 </div>
             </div>
             <div class="unit-conv" id="out-conv"></div>
@@ -1351,7 +1351,7 @@
                 <button class="chip" data-filter="best">⭐ Best Seller</button>
             </div>
             <div class="search-container">
-                <input type="text" id="search-stock" placeholder="🔍 ค้นหาชนิดสินค้า ไซส์ ล็อต หรือบาร์โค้ด..." oninput="filterStock()">
+                <input type="text" id="search-stock" placeholder="🔍 ค้นหาชนิดสินค้า น้ำหนัก ล็อต หรือบาร์โค้ด..." oninput="filterStock()">
                 <button class="btn btn-primary" style="width: auto; white-space: nowrap;" onclick="openBatchPrint()">🖨️ พิมพ์รวม</button>
                 <button class="btn btn-outline" style="width: auto;" onclick="exportStockCSV()">📥 CSV</button>
             </div>
@@ -1360,8 +1360,8 @@
                     <thead>
                         <tr>
                             <th style="width: 60px;">รูป</th>
-                            <th>ไซส์</th>
-                            <th>น้ำหนัก</th>
+                            <th>น้ำหนัก/แพ็ค</th>
+                            <th>น้ำหนักรวม</th>
                             <th>ล็อต</th>
                             <th>บาร์โค้ด</th>
                             <th id="th-price">ราคา</th>
@@ -1609,8 +1609,8 @@
     const SALE_LABEL = 'ราคาออนไลน์';
     const salePrice = it => Number(it && it[SALE_KEY]) || 0;
 
-    /* ===== หน่วย แพ็ค / กก. / ตัน — สต๊อกนับเป็นแพ็ค น้ำหนักคิดจากค่าเฉลี่ยของช่วงน้ำหนักไซส์นั้น ===== */
-    const UNIT = { pc: 'แพ็ค', kg: 'กก.', ton: 'ตัน' };
+    /* ===== หน่วย แพ็ค / กก. — สต๊อกนับเป็นแพ็ค น้ำหนักคิดจากน้ำหนักต่อแพ็ค ===== */
+    const UNIT = { pc: 'แพ็ค', kg: 'กก.' };
     const unitMode = { in: 'pc', out: 'pc' };
     function avgKg(w) {
         const m = String(w || '').match(/^(\d+(?:\.\d+)?)(?:-(\d+(?:\.\d+)?))?$/);
@@ -1618,7 +1618,7 @@
     }
     function fmtKg(kg) {
         if (!(kg > 0)) return '0 กก.';
-        return kg >= 1000 ? `${(kg / 1000).toLocaleString('th-TH', { maximumFractionDigits: 2 })} ตัน` : `${Math.round(kg).toLocaleString('th-TH')} กก.`;
+        return `${kg.toLocaleString('th-TH', { maximumFractionDigits: 1 })} กก.`;
     }
     const itemKg = it => (Number(it.qty) || 0) * avgKg(it.weight);
     /** แปลงค่าที่กรอก → { pcs, amount, unit, avg, ok, msg } */
@@ -1632,8 +1632,8 @@
             const pcs = Math.floor(amount);
             return { pcs, amount: pcs, unit, avg, ok: pcs > 0, msg: avg ? `≈ ${fmtKg(pcs * avg)}` : '' };
         }
-        if (!avg) return { pcs: 0, amount, unit, avg, ok: false, msg: 'ยังไม่รู้น้ำหนักต่อแพ็ค — ใส่น้ำหนักของไซส์ก่อน หรือกรอกเป็นแพ็ค', bad: true };
-        const kg = unit === 'ton' ? amount * 1000 : amount;
+        if (!avg) return { pcs: 0, amount, unit, avg, ok: false, msg: 'ยังไม่รู้น้ำหนักต่อแพ็ค — ใส่น้ำหนักต่อแพ็คก่อน หรือกรอกเป็นแพ็ค', bad: true };
+        const kg = amount;
         const pcs = Math.max(1, Math.round(kg / avg));
         return { pcs, amount, unit, avg, ok: true, msg: `≈ <b>${pcs.toLocaleString('th-TH')} แพ็ค</b> · คิดจากน้ำหนักเฉลี่ย ${avg} กก./แพ็ค` };
     }
@@ -1677,10 +1677,10 @@
         'แปรรูป': { icon: '🍱', label: 'ผลิตภัณฑ์แปรรูป', cls: 'seedless', bg: '#9A5B13' }
     };
     let SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
-    // ตารางไซส์ → น้ำหนักต่อแพ็ค (กก.) แยกตามประเภท — กดไซส์แล้วน้ำหนักขึ้นเอง (ค่าจริงส่งมาจาก Code.gs)
+    // ไม่ใช้ระบบไซส์แล้ว (ตารางว่าง) — น้ำหนักต่อแพ็คกรอกเองเป็น กก.
     let SIZE_TABLE = {
-        'ปลาสลิด': { S: '0.5', M: '1', L: '2', XL: '5' },
-        'แปรรูป':  { S: '0.1', M: '0.2', L: '0.5', XL: '1' }
+        'ปลาสลิด': {},
+        'แปรรูป':  {}
     };
     const sizesOf = t => Object.keys(SIZE_TABLE[t] || {});
     const stdWeight = (t, s) => (SIZE_TABLE[t] || {})[s] || '';
@@ -1866,7 +1866,7 @@
         if (data.lowStock) LOW_STOCK = Number(data.lowStock);
         if (data.secure) SECURE = Object.assign(SECURE, data.secure);
         if (Array.isArray(data.palette) && data.palette.length) PALETTE = data.palette;
-        if (Array.isArray(data.sizes) && data.sizes.length) SIZES = data.sizes.filter(s => s !== 'XXXL');
+        if (Array.isArray(data.sizes) && data.sizes.length) SIZES = data.sizes.filter(s => s !== 'XXXL');  // (ไม่ได้แสดงแล้ว)
         if (data.sizeTable && typeof data.sizeTable === 'object') {
             const changed = JSON.stringify(data.sizeTable) !== JSON.stringify(SIZE_TABLE);
             SIZE_TABLE = data.sizeTable;
@@ -1918,9 +1918,8 @@
                 <datalist id="${p}-variety-list"></datalist></div>
             <div><label for="${p}-lot">ล็อต (ถ้ามี)</label><input type="text" id="${p}-lot" placeholder="เช่น L-01"></div>
         </div>
-        <label>ไซส์</label>
-        <div class="chips" id="${p}-size"></div>
-        <label>น้ำหนัก (กก.) <span style="font-weight:400; color:var(--text-muted)">— ขึ้นให้อัตโนมัติตามไซส์ แก้เองได้</span></label>
+        <div class="chips" id="${p}-size" style="display:none !important"></div>
+        <label>น้ำหนักต่อแพ็ค (กก.) <span style="font-weight:400; color:var(--text-muted)">— ใส่ค่าเดียว หรือเป็นช่วง เช่น 0.9 ถึง 1.1</span></label>
         <div class="range-row">
             <input type="number" id="${p}-wmin" placeholder="เช่น 0.5" min="0" step="0.05" inputmode="decimal">
             <span>ถึง</span>
@@ -1928,7 +1927,7 @@
         </div>
         <label>สีประจำชนิดสินค้า (ใช้ระบายในชีทและป้าย)</label>
         <div class="swatches" id="${p}-swatches"></div>
-        <label class="check"><input type="checkbox" id="${p}-color-all" checked> ใช้สีนี้กับทุกไซส์ของชนิดสินค้านี้</label>
+        <label class="check"><input type="checkbox" id="${p}-color-all" checked> ใช้สีนี้กับทุกรายการของชนิดสินค้านี้</label>
         <div class="name-preview" id="${p}-preview"></div>`;
     }
 
@@ -2083,7 +2082,7 @@
             b.filledFrom = null;
         }
         let sub = '', cls = '';
-        if (!name) sub = 'พิมพ์หรือเลือกชนิดสินค้า แล้วเลือกไซส์และน้ำหนัก';
+        if (!name) sub = 'พิมพ์หรือเลือกชนิดสินค้า แล้วใส่น้ำหนักต่อแพ็ค';
         else {
             const match = inventory.find(it => it.name === name && (it.lot || '') === f.lot);
             if (p === 'in') {
@@ -2107,7 +2106,7 @@
             <div class="q-type" style="color:${t.type === 'แปรรูป' ? 'var(--seedless)' : 'var(--seeded)'}">${typeMeta(t.type).icon} ${typeMeta(t.type).label}</div>
             ${t.varieties.map(v => `<div class="q-var">
                 <div class="q-var-name"><span class="dot" style="background:${v.color}"></span>${escapeHtml(v.variety)}</div>
-                ${v.items.map(it => `<button type="button" class="q-chip${it.qty <= 0 ? ' out' : ''}" data-q="${mode}" data-key="${encodeURIComponent(itemKey(it))}">${it.best ? '🔥 ' : ''}${escapeHtml(it.size || '-')}${it.lot ? ' · ' + escapeHtml(it.lot) : ''}<small>${fmt(it.qty)}</small></button>`).join('')}
+                ${v.items.map(it => `<button type="button" class="q-chip${it.qty <= 0 ? ' out' : ''}" data-q="${mode}" data-key="${encodeURIComponent(itemKey(it))}">${it.best ? '🔥 ' : ''}${it.weight ? escapeHtml(it.weight) + ' กก.' : '-'}${it.lot ? ' · ' + escapeHtml(it.lot) : ''}<small>${fmt(it.qty)}</small></button>`).join('')}
             </div>`).join('')}`).join('');
     }
 
@@ -2430,7 +2429,7 @@
             showNotification('ดึงข้อมูลสำเร็จ', matches.length > 1 ? `มี ${matches.length} ล็อต — แก้ช่องล็อตได้` : 'ใส่จำนวนที่รับเข้าได้เลย', 'info');
             $('in-qty').focus();
         } else {
-            showNotification('สินค้าใหม่', 'ไม่พบบาร์โค้ดนี้ เลือกประเภท/ชนิดสินค้า/ไซส์เพื่อเพิ่มสินค้าใหม่', 'info');
+            showNotification('สินค้าใหม่', 'ไม่พบบาร์โค้ดนี้ เลือกประเภท/ชนิดสินค้า/น้ำหนักเพื่อเพิ่มสินค้าใหม่', 'info');
             $('in-variety').focus();
         }
     }
@@ -2475,7 +2474,7 @@
 
         ['in-barcode', 'in-qty', 'in-price', 'in-factory', 'in-image'].forEach(id => $(id).value = '');
         unitPreview('in');
-        builderReset('in', true);  // คงประเภท+ชนิดสินค้าไว้ รับไซส์ถัดไปได้เร็ว
+        builderReset('in', true);  // คงประเภท+ชนิดสินค้าไว้ รับรายการถัดไปได้เร็ว
         renderAll(); bounceBadge();
         showNotification('กำลังบันทึก', `รับ ${name} +${qty} แพ็ค${conv.unit !== 'pc' ? ` (${conv.amount} ${UNIT[conv.unit]})` : ''} · คงเหลือ ${fmt(it.qty)}`, 'info');
 
@@ -2496,7 +2495,7 @@
         }
         groupInventory(inventory.filter(it => it.qty > 0)).forEach(t => t.varieties.forEach(v => {
             parts.push(`<optgroup label="${typeMeta(t.type).icon} ${escapeHtml(v.variety)}${t.type === 'แปรรูป' ? ' (แปรรูป)' : ''}">`);
-            v.items.forEach(it => parts.push(`<option value="${encodeURIComponent(itemKey(it))}">ไซส์ ${escapeHtml(it.size || '-')}${it.weight ? ' · ' + escapeHtml(it.weight) + ' กก.' : ''}${it.lot ? ' · ล็อต ' + escapeHtml(it.lot) : ''} — เหลือ ${fmt(it.qty)}</option>`));
+            v.items.forEach(it => parts.push(`<option value="${encodeURIComponent(itemKey(it))}">${it.weight ? escapeHtml(it.weight) + ' กก./แพ็ค' : 'ไม่ระบุน้ำหนัก'}${it.lot ? ' · ล็อต ' + escapeHtml(it.lot) : ''} — เหลือ ${fmt(it.qty)}</option>`));
             parts.push('</optgroup>');
         }));
         sel.innerHTML = parts.join('');
@@ -2679,8 +2678,8 @@
                     const search = escapeHtml(`${it.name} ${it.lot} ${it.barcode} ${it.size}`.toLowerCase());
                     parts.push(`<tr class="search-row${it.best ? ' is-best' : ''}" data-type="${escapeHtml(t.type)}" data-best="${it.best ? 1 : 0}" data-var="${vkey}" data-search="${search}">
                         <td style="border-left: 6px solid ${it.color}"><img src="${escapeHtml(img || NO_IMG)}" class="item-image" loading="lazy" alt="" onerror="this.onerror=null;this.src=NO_IMG"></td>
-                        <td style="white-space:nowrap"><span class="size-badge" style="background:${it.color}; color:${textOn(it.color)}">${escapeHtml(it.size || '-')}</span>${it.best ? '<span class="best-ribbon">BEST</span>' : ''}</td>
-                        <td>${it.weight ? escapeHtml(it.weight) + ' กก.' : '-'}</td>
+                        <td style="white-space:nowrap"><span class="size-badge" style="background:${it.color}; color:${textOn(it.color)}">${it.weight ? escapeHtml(it.weight) + ' กก.' : '-'}</span>${it.best ? '<span class="best-ribbon">BEST</span>' : ''}</td>
+                        <td>${it.weight ? '≈ ' + fmtKg(itemKg(it)) : '-'}</td>
                         <td style="color:var(--text-muted);">${escapeHtml(it.lot || '-')}</td>
                         <td>${bc}</td>
                         <td style="font-weight:600;">฿${fmt(salePrice(it))}</td>
@@ -2719,8 +2718,8 @@
     function exportStockCSV() {
         if (!inventory.length) { showNotification('ไม่มีข้อมูล', 'คลังว่างอยู่', 'warning'); return; }
         const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-        const rows = [['ประเภท', 'ชนิดสินค้า', 'ไซส์', 'น้ำหนัก(กก.)', 'ชื่อสินค้า', 'ล็อต', 'บาร์โค้ด', 'คงเหลือ', 'ราคาขายออนไลน์(บาท)', 'ราคาขายหน้าร้าน(บาท)', `มูลค่าตาม${SALE_LABEL}(บาท)`, 'สี'].map(esc).join(',')];
-        inventory.forEach(it => rows.push([esc(it.type), esc(it.variety), esc(it.size), esc(it.weight), esc(it.name), esc(it.lot || '-'),
+        const rows = [['ประเภท', 'ชนิดสินค้า', 'น้ำหนักต่อแพ็ค(กก.)', 'ชื่อสินค้า', 'ล็อต', 'บาร์โค้ด', 'คงเหลือ', 'ราคาขายออนไลน์(บาท)', 'ราคาขายหน้าร้าน(บาท)', `มูลค่าตาม${SALE_LABEL}(บาท)`, 'สี'].map(esc).join(',')];
+        inventory.forEach(it => rows.push([esc(it.type), esc(it.variety), esc(it.weight), esc(it.name), esc(it.lot || '-'),
             esc(it.barcode ? '\t' + it.barcode : ''), it.qty, it.price, it.factory || 0, it.qty * salePrice(it), esc(it.color)].join(',')));
         const blob = new Blob(['﻿' + rows.join('\n')], { type: 'text/csv;charset=utf-8' });
         const a = document.createElement('a');
@@ -2830,7 +2829,7 @@
                 <div class="lbl">
                     <div class="lbl-bar" style="background:${it.color}"></div>
                     <div class="lbl-name">${escapeHtml(it.variety)}</div>
-                    <div class="lbl-sub">${typeMeta(it.type).icon} ${escapeHtml(it.type)}${it.size ? ' · ไซส์ ' + escapeHtml(it.size) : ''}${it.weight ? ' · ' + escapeHtml(it.weight) + ' กก.' : ''}</div>
+                    <div class="lbl-sub">${typeMeta(it.type).icon} ${escapeHtml(it.type)}${it.weight ? ' · ' + escapeHtml(it.weight) + ' กก.' : ''}</div>
                     <div class="lbl-bc">${cache[it.barcode]}</div>
                     ${it.best ? '<div class="lbl-best">★ BEST SELLER</div>' : ''}
                     <div class="lbl-foot">${it.lot ? 'ล็อต ' + escapeHtml(it.lot) + ' · ' : ''}${salePrice(it) ? '฿' + fmt(salePrice(it)) : ''}</div>
@@ -2878,12 +2877,12 @@
 
         lows.sort((a, b) => a.qty - b.qty);
         $('low-stock-list').innerHTML = lows.length
-            ? lows.slice(0, 24).map(it => `<div class="low-item"><span class="nm" title="${escapeHtml(it.name)}"><span class="dot" style="background:${it.color}"></span>${escapeHtml(it.variety)} · ${escapeHtml(it.size || '-')}${it.lot ? ` <small style="opacity:.6">(${escapeHtml(it.lot)})</small>` : ''}</span><span class="status-badge ${it.qty === 0 ? 'status-out' : 'status-low'}">${fmt(it.qty)}</span></div>`).join('')
+            ? lows.slice(0, 24).map(it => `<div class="low-item"><span class="nm" title="${escapeHtml(it.name)}"><span class="dot" style="background:${it.color}"></span>${escapeHtml(it.variety)}${it.weight ? ' · ' + escapeHtml(it.weight) + ' กก.' : ''}${it.lot ? ` <small style="opacity:.6">(${escapeHtml(it.lot)})</small>` : ''}</span><span class="status-badge ${it.qty === 0 ? 'status-out' : 'status-low'}">${fmt(it.qty)}</span></div>`).join('')
             : '<div class="empty-note">สต๊อกปกติทุกรายการ 👍</div>';
 
         // แท่งเรียงตามตาราง ใช้สีของชนิดสินค้า
         const list = inventory.slice(0, 40);
-        const labels = list.length ? list.map(it => `${it.variety.split(' ')[0]} ${it.size || ''}${it.type === 'แปรรูป' ? ' 🍱' : ''}`.trim()) : ['ว่าง'];
+        const labels = list.length ? list.map(it => `${it.variety.split(' ')[0]} ${it.weight ? it.weight + 'กก.' : ''}${it.type === 'แปรรูป' ? ' 🍱' : ''}`.trim()) : ['ว่าง'];
         const values = list.length ? list.map(it => it.qty) : [0];
         const colors = list.map(it => it.color);
         const borders = list.map(it => mix(it.color, '#000000', 0.25));
@@ -4245,7 +4244,7 @@
             $('ord-list').innerHTML = list.map(o => {
                 const cls = STATUS_CLS[o.status] || 'o-new';
                 const lines = o.lines.length
-                    ? o.lines.map(l => `<li><span>${escapeHtml(l.variety || l.name)} <b>${escapeHtml(l.size || '')}</b>${l.weight ? ` <small>${escapeHtml(l.weight)} กก.</small>` : ''}</span><span>× ${fmt(l.qty)} แพ็ค</span><span>${l.price ? '฿' + fmt(l.price * l.qty) : 'สอบถามราคา'}</span></li>`).join('')
+                    ? o.lines.map(l => `<li><span>${escapeHtml(l.variety || l.name)}${l.weight ? ` <small>${escapeHtml(l.weight)} กก.</small>` : ''}</span><span>× ${fmt(l.qty)} แพ็ค</span><span>${l.price ? '฿' + fmt(l.price * l.qty) : 'สอบถามราคา'}</span></li>`).join('')
                     : `<li><span>${escapeHtml(o.linesText).replace(/\n/g, '<br>')}</span></li>`;
                 const total = typeof o.total === 'number' ? '฿' + fmt(o.total) : escapeHtml(String(o.total));
                 const btn = (act, label, cls2) => `<button class="btn ${cls2} btn-sm" data-o="${escapeHtml(o.no)}" data-act="${act}">${label}</button>`;
@@ -4389,7 +4388,7 @@
             return `<div class="cv-item${open.has(key) ? ' open' : ''}" data-key="${key}">
                 <div class="cv-head"><span class="dot" style="background:${v.color}"></span>
                     <span class="cv-name">${escapeHtml(v.variety)}</span>${typeBadge(t.type)}
-                    <span style="color:var(--text-muted); font-size:13px">${v.items.length} ไซส์ ▾</span></div>
+                    <span style="color:var(--text-muted); font-size:13px">${v.items.length} รายการ ▾</span></div>
                 <div class="cv-body"><div class="swatches">
                     ${PALETTE.map(c => `<button type="button" class="swatch${c.toUpperCase() === String(v.color).toUpperCase() ? ' active' : ''}" style="background:${c}; --sw-fg:${textOn(c)}" data-cv="${key}" data-v="${c}"></button>`).join('')}
                     <label class="swatch custom" title="เลือกสีเอง"><input type="color" value="${v.color}" data-cvcustom="${key}"></label>
