@@ -1740,13 +1740,10 @@
         if (f.weight) n += ' ' + f.weight + ' กก.';
         return n.replace(/\s+/g, ' ').trim();
     }
-    function makeWeight(a, b) {
-        a = parseFloat(a); b = parseFloat(b);
-        const okA = a > 0, okB = b > 0;
-        if (okA && okB) { if (b < a) [a, b] = [b, a]; return a === b ? String(a) : `${a}-${b}`; }
-        if (okA) return String(a);
-        if (okB) return String(b);
-        return '';
+    /** น้ำหนักต่อแพ็ค = ค่าเดียวแน่นอน (กก.) */
+    function makeWeight(a) {
+        a = parseFloat(a);
+        return a > 0 ? String(Math.round(a * 1000) / 1000) : '';
     }
     function splitWeight(w) { const p = norm(w).split('-'); return [p[0] || '', p[1] || '']; }
     function normColor(v) {
@@ -1919,11 +1916,10 @@
             <div><label for="${p}-lot">ล็อต (ถ้ามี)</label><input type="text" id="${p}-lot" placeholder="เช่น L-01"></div>
         </div>
         <div class="chips" id="${p}-size" style="display:none !important"></div>
-        <label>น้ำหนักต่อแพ็ค (กก.) <span style="font-weight:400; color:var(--text-muted)">— ใส่ค่าเดียว หรือเป็นช่วง เช่น 0.9 ถึง 1.1</span></label>
-        <div class="range-row">
-            <input type="number" id="${p}-wmin" placeholder="เช่น 0.5" min="0" step="0.05" inputmode="decimal">
-            <span>ถึง</span>
-            <input type="number" id="${p}-wmax" placeholder="เช่น 1" min="0" step="0.05" inputmode="decimal">
+        <div id="${p}-wbox">
+            <label for="${p}-wmin">น้ำหนักต่อแพ็ค (กก.) <span style="font-weight:400; color:var(--text-muted)">— เฉพาะปลาสลิด (ไม่แปรรูป) น้ำหนักแน่นอน เช่น 1</span></label>
+            <input type="number" id="${p}-wmin" placeholder="เช่น 1" min="0" step="0.01" inputmode="decimal">
+            <input type="hidden" id="${p}-wmax" value="">
         </div>
         <label>สีประจำชนิดสินค้า (ใช้ระบายในชีทและป้าย)</label>
         <div class="swatches" id="${p}-swatches"></div>
@@ -1978,7 +1974,24 @@
         }
         renderSizeChips(p);
         if (b.size && b.weightAuto && stdWeight(t, b.size)) fillWeight(p, stdWeight(t, b.size));
+        syncWeightBox(p);
         onVarietyInput(p);
+    }
+
+    /** น้ำหนักต่อแพ็คมีเฉพาะปลาสลิด (ไม่แปรรูป) — แปรรูปซ่อนช่องน้ำหนักและปุ่ม กก. */
+    const hasWeight = t => t !== 'แปรรูป';
+    function syncWeightBox(p) {
+        const b = builders[p]; if (!b) return;
+        const fish = hasWeight(b.type);
+        const box = $(`${p}-wbox`); if (box) box.style.display = fish ? '' : 'none';
+        if (!fish) { $(`${p}-wmin`).value = ''; $(`${p}-wmax`).value = ''; }
+        if (p === 'in') syncUnit('in', fish);
+    }
+    function syncUnit(p, allowKg) {
+        const seg = $(p + '-unit'); if (!seg) return;
+        const kg = seg.querySelector('[data-u="kg"]');
+        if (kg) kg.style.display = allowKg ? '' : 'none';
+        if (!allowKg && unitMode[p] !== 'pc') seg.querySelector('[data-u="pc"]').click();
     }
 
     function setBSize(p, s, fromCustom) {
@@ -2038,7 +2051,7 @@
         const b = builders[p];
         return {
             type: b.type, variety: cleanVariety($(`${p}-variety`).value), size: b.size,
-            weight: makeWeight($(`${p}-wmin`).value, $(`${p}-wmax`).value), lot: norm($(`${p}-lot`).value),
+            weight: hasWeight(b.type) ? makeWeight($(`${p}-wmin`).value) : '', lot: norm($(`${p}-lot`).value),
             color: b.color, applyColorToVariety: $(`${p}-color-all`).checked
         };
     }
@@ -2054,6 +2067,7 @@
         builders[p].weightAuto = !it.weight || it.weight === stdWeight(it.type, it.size);
         document.querySelectorAll(`#${p}-type .seg-btn`).forEach(x => x.classList.toggle('active', x.dataset.v === it.type));
         renderSizeChips(p);
+        syncWeightBox(p);
         setBColor(p, it.color || nextFreeColor(), false);
     }
 
@@ -2508,6 +2522,7 @@
     }
 
     function showIssuePreview(it) {
+        syncUnit('out', !!avgKg(it.weight));
         setTimeout(() => unitPreview('out'), 0);
         const box = $('out-preview');
         const img = formatImageUrl(it.image) || NO_IMG;
