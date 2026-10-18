@@ -1013,6 +1013,40 @@
             .la-copy p { display: none; }
         }
         @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+        /* ===== ตารางคลังแบบเรียบ (ไม่มีไฮไลต์สี) ===== */
+        .dot, .np-swatch, .lbl-bar, .best-inner::before { display: none !important; }
+        #stock-table td { padding: 12px 12px; vertical-align: middle; }
+        .stk-th-l, td.stk-l { text-align: left !important; }
+        .stk-item { display: flex; align-items: center; gap: 14px; min-width: 260px; }
+        .stk-img { width: 48px; height: 48px; border-radius: 12px; object-fit: cover; flex-shrink: 0; background: var(--sheet-2); border: 1px solid var(--hair); }
+        .stk-txt { min-width: 0; }
+        .stk-name { font-weight: 600; font-size: 15px; line-height: 1.35; color: var(--text-main); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .stk-best { color: #D9A13B; margin-right: 6px; }
+        .stk-meta { margin-top: 4px; font-size: 12.5px; color: var(--text-muted); display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+        .stk-meta i { font-style: normal; opacity: .5; }
+        .stk-type { padding: 1px 8px; border-radius: 6px; background: var(--sheet-2); border: 1px solid var(--hair); font-size: 11.5px; color: var(--text-muted); }
+        .stk-bc { background: none; border: 0; padding: 0; font: inherit; color: var(--text-muted); text-decoration: underline dotted; cursor: pointer; }
+        .stk-bc:hover { color: var(--brand-primary); }
+        .stk-num { white-space: nowrap; }
+        .stk-price { font-weight: 600; }
+        .stk-dim { color: var(--hair-strong); }
+        table:has(#stock-table) th { white-space: nowrap; }
+        @media (max-width: 700px) {
+            table:has(#stock-table) { min-width: 0 !important; }
+            table:has(#stock-table) thead { display: none; }
+            #stock-table, #stock-table td { display: block; }
+            #stock-table tr.search-row { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 10px 16px; padding: 14px 12px; border-bottom: 1px solid var(--hair); }
+            #stock-table td { padding: 0 !important; border: 0 !important; text-align: left !important; }
+            #stock-table td.stk-l { grid-column: 1 / -1; }
+            #stock-table .stk-item { min-width: 0; }
+            #stock-table td:last-child { grid-column: 1 / -1; }
+            #stock-table td:last-child .row-actions { justify-content: flex-start; }
+            #stock-table td.stk-num:nth-child(4) { justify-self: end; display: flex; align-items: center; gap: 8px; }
+            #stock-table .kg-sub { margin: 0; }
+        }
+        tr.search-row.is-best td { background: transparent; }
+        .star-btn.on { color: #D9A13B; }
     </style>
 </head>
 <body>
@@ -1359,14 +1393,11 @@
                 <table>
                     <thead>
                         <tr>
-                            <th style="width: 60px;">รูป</th>
+                            <th class="stk-th-l">สินค้า</th>
                             <th>น้ำหนัก/แพ็ค</th>
-                            <th>น้ำหนักรวม</th>
-                            <th>ล็อต</th>
-                            <th>บาร์โค้ด</th>
                             <th id="th-price">ราคา</th>
                             <th>คงเหลือ</th>
-                            <th>จัดการ</th>
+                            <th style="width:150px"></th>
                         </tr>
                     </thead>
                     <tbody id="stock-table"></tbody>
@@ -1400,9 +1431,11 @@
             <div class="sec-list" id="sec-list"></div>
             <button class="btn btn-outline" style="margin-bottom: 6px;" onclick="showPage('attendance', menuBtn('attendance'))">📸 เปิดระบบสแกนลงเวลาเข้า-ออกงาน</button>
 
+            <div style="display:none">
             <div class="section-title">🎨 สีประจำชนิดสินค้า</div>
             <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 12px 5px;">กดที่ชนิดสินค้าเพื่อเปลี่ยนสี — สีจะเปลี่ยนทั้งในเว็บและในชีท Google ทุกไซส์</p>
             <div id="color-list" class="cv-list"></div>
+            </div>
 
             <div class="section-title">🏢 โลโก้องค์กร</div>
             <label for="setting-logo-url">ลิงก์รูปภาพโลโก้</label>
@@ -1921,9 +1954,8 @@
             <input type="number" id="${p}-wmin" placeholder="เช่น 1" min="0" step="0.01" inputmode="decimal">
             <input type="hidden" id="${p}-wmax" value="">
         </div>
-        <label>สีประจำชนิดสินค้า (ใช้ระบายในชีทและป้าย)</label>
-        <div class="swatches" id="${p}-swatches"></div>
-        <label class="check"><input type="checkbox" id="${p}-color-all" checked> ใช้สีนี้กับทุกรายการของชนิดสินค้านี้</label>
+        <div style="display:none"><div class="swatches" id="${p}-swatches"></div>
+        <input type="checkbox" id="${p}-color-all" checked></div>
         <div class="name-preview" id="${p}-preview"></div>`;
     }
 
@@ -2676,52 +2708,41 @@
     /* ================= Stock table ================= */
     function updateStockTable() {
         const parts = [];
-        groupInventory().forEach(t => {
-            const tm = typeMeta(t.type);
-            const sum = t.varieties.reduce((s, v) => s + v.items.reduce((a, b) => a + b.qty, 0), 0);
-            const tkg = t.varieties.reduce((s, v) => s + v.items.reduce((a, b) => a + itemKg(b), 0), 0);
-            parts.push(`<tr class="type-row" data-type="${escapeHtml(t.type)}"><td colspan="8" style="background:${tm.bg}">${tm.icon} ${tm.label} <span>· ${t.varieties.length} ชนิดสินค้า · คงเหลือ ${fmt(sum)} แพ็ค ≈ ${fmtKg(tkg)}</span></td></tr>`);
-            t.varieties.forEach(v => {
-                const vkey = escapeHtml(t.type + '|' + v.key);
-                const vsum = v.items.reduce((a, b) => a + b.qty, 0);
-                parts.push(`<tr class="var-row" data-type="${escapeHtml(t.type)}" data-var="${vkey}"><td colspan="8"><span class="dot" style="background:${v.color}; width:18px; height:18px;"></span> ${escapeHtml(v.variety)} <small>${v.items.length} ไซส์ · ${fmt(vsum)} แพ็ค ≈ ${fmtKg(v.items.reduce((a, b) => a + itemKg(b), 0))}</small></td></tr>`);
-                v.items.forEach(it => {
-                    const index = inventory.indexOf(it);
-                    const img = formatImageUrl(it.image);
-                    const cls = it.qty === 0 ? 'status-out' : it.qty <= LOW_STOCK ? 'status-low' : 'status-high';
-                    const bc = it.barcode ? `<button class="clickable-barcode" data-action="print" data-index="${index}">${escapeHtml(it.barcode)}</button>` : '<span style="color:var(--text-muted)">-</span>';
-                    const search = escapeHtml(`${it.name} ${it.lot} ${it.barcode} ${it.size}`.toLowerCase());
-                    parts.push(`<tr class="search-row${it.best ? ' is-best' : ''}" data-type="${escapeHtml(t.type)}" data-best="${it.best ? 1 : 0}" data-var="${vkey}" data-search="${search}">
-                        <td style="border-left: 6px solid ${it.color}"><img src="${escapeHtml(img || NO_IMG)}" class="item-image" loading="lazy" alt="" onerror="this.onerror=null;this.src=NO_IMG"></td>
-                        <td style="white-space:nowrap"><span class="size-badge" style="background:${it.color}; color:${textOn(it.color)}">${it.weight ? escapeHtml(it.weight) + ' กก.' : '-'}</span>${it.best ? '<span class="best-ribbon">BEST</span>' : ''}</td>
-                        <td>${it.weight ? '≈ ' + fmtKg(itemKg(it)) : '-'}</td>
-                        <td style="color:var(--text-muted);">${escapeHtml(it.lot || '-')}</td>
-                        <td>${bc}</td>
-                        <td style="font-weight:600;">฿${fmt(salePrice(it))}</td>
-                        <td><span class="status-badge ${cls}">${fmt(it.qty)}</span>${avgKg(it.weight) && it.qty ? `<div class="kg-sub">≈ ${fmtKg(itemKg(it))}</div>` : ''}</td>
-                        <td><div class="row-actions">
-                            <button class="btn-edit" data-action="edit" data-index="${index}">แก้ไข</button>
-                            <button class="btn-icon" title="พิมพ์สติกเกอร์" data-action="print" data-index="${index}">🖨</button>
-                            <button class="star-btn${it.best ? ' on' : ''}" title="${it.best ? 'เลิกเป็น Best Seller' : 'ตั้งเป็น Best Seller'}" data-action="best" data-index="${index}">${it.best ? '⭐' : '☆'}</button>
-                        </div></td></tr>`);
-                });
-            });
-        });
-        $('stock-table').innerHTML = parts.join('') || '<tr><td colspan="8" class="empty-note">ยังไม่มีสินค้าในคลัง</td></tr>';
+        groupInventory().forEach(t => t.varieties.forEach(v => v.items.forEach(it => {
+            const index = inventory.indexOf(it);
+            const img = formatImageUrl(it.image);
+            const cls = it.qty === 0 ? 'status-out' : it.qty <= LOW_STOCK ? 'status-low' : 'status-high';
+            const search = escapeHtml(`${it.name} ${it.lot} ${it.barcode} ${it.weight}`.toLowerCase());
+            const meta = [
+                `<span class="stk-type">${t.type === 'แปรรูป' ? 'แปรรูป' : 'ปลาสลิด'}</span>`,
+                it.lot ? `ล็อต ${escapeHtml(it.lot)}` : '',
+                it.barcode ? `<button class="stk-bc" data-action="print" data-index="${index}" title="พิมพ์สติกเกอร์">${escapeHtml(it.barcode)}</button>` : ''
+            ].filter(Boolean).join('<i>·</i>');
+            parts.push(`<tr class="search-row" data-type="${escapeHtml(t.type)}" data-best="${it.best ? 1 : 0}" data-search="${search}">
+                <td class="stk-l"><div class="stk-item">
+                    <img src="${escapeHtml(img || NO_IMG)}" class="stk-img" loading="lazy" alt="" onerror="this.onerror=null;this.src=NO_IMG">
+                    <div class="stk-txt"><div class="stk-name">${it.best ? '<span class="stk-best" title="Best Seller">★</span>' : ''}${escapeHtml(it.variety || it.name)}</div>
+                    <div class="stk-meta">${meta}</div></div></div></td>
+                <td class="stk-num">${it.weight ? escapeHtml(it.weight) + ' กก.' : '<span class="stk-dim">—</span>'}</td>
+                <td class="stk-num stk-price">฿${fmt(salePrice(it))}</td>
+                <td class="stk-num"><span class="status-badge ${cls}">${fmt(it.qty)}</span>${avgKg(it.weight) && it.qty ? `<div class="kg-sub">≈ ${fmtKg(itemKg(it))}</div>` : ''}</td>
+                <td><div class="row-actions">
+                    <button class="btn-edit" data-action="edit" data-index="${index}">แก้ไข</button>
+                    <button class="btn-icon" title="พิมพ์สติกเกอร์" data-action="print" data-index="${index}">🖨</button>
+                    <button class="star-btn${it.best ? ' on' : ''}" title="${it.best ? 'เลิกเป็น Best Seller' : 'ตั้งเป็น Best Seller'}" data-action="best" data-index="${index}">${it.best ? '★' : '☆'}</button>
+                </div></td></tr>`);
+        })));
+        $('stock-table').innerHTML = parts.join('') || '<tr><td colspan="5" class="empty-note">ยังไม่มีสินค้าในคลัง</td></tr>';
         filterStock();
     }
 
     function filterStock() {
         const q = norm($('search-stock').value).toLowerCase();
-        const visVar = new Set(), visType = new Set();
         document.querySelectorAll('#stock-table .search-row').forEach(row => {
             const typeOk = stockFilterType === 'all' || (stockFilterType === 'best' ? row.dataset.best === '1' : row.dataset.type === stockFilterType);
             const show = typeOk && (!q || row.dataset.search.includes(q));
             row.style.display = show ? '' : 'none';
-            if (show) { visVar.add(row.dataset.var); visType.add(row.dataset.type); }
         });
-        document.querySelectorAll('#stock-table .var-row').forEach(r => r.style.display = visVar.has(r.dataset.var) ? '' : 'none');
-        document.querySelectorAll('#stock-table .type-row').forEach(r => r.style.display = visType.has(r.dataset.type) ? '' : 'none');
     }
 
     function visibleStockItems() {
@@ -2895,12 +2916,12 @@
             ? lows.slice(0, 24).map(it => `<div class="low-item"><span class="nm" title="${escapeHtml(it.name)}"><span class="dot" style="background:${it.color}"></span>${escapeHtml(it.variety)}${it.weight ? ' · ' + escapeHtml(it.weight) + ' กก.' : ''}${it.lot ? ` <small style="opacity:.6">(${escapeHtml(it.lot)})</small>` : ''}</span><span class="status-badge ${it.qty === 0 ? 'status-out' : 'status-low'}">${fmt(it.qty)}</span></div>`).join('')
             : '<div class="empty-note">สต๊อกปกติทุกรายการ 👍</div>';
 
-        // แท่งเรียงตามตาราง ใช้สีของชนิดสินค้า
+        // แท่งเรียงตามตาราง (ปลาสลิด = ฟ้าน้ำ · แปรรูป = ทอง)
         const list = inventory.slice(0, 40);
         const labels = list.length ? list.map(it => `${it.variety.split(' ')[0]} ${it.weight ? it.weight + 'กก.' : ''}${it.type === 'แปรรูป' ? ' 🍱' : ''}`.trim()) : ['ว่าง'];
         const values = list.length ? list.map(it => it.qty) : [0];
-        const colors = list.map(it => it.color);
-        const borders = list.map(it => mix(it.color, '#000000', 0.25));
+        const colors = list.map(it => it.type === 'แปรรูป' ? '#D9A45B' : '#4FA3B3');
+        const borders = colors;
         if (allStockChart) {
             allStockChart.data.labels = labels;
             Object.assign(allStockChart.data.datasets[0], { data: values, backgroundColor: colors, borderColor: borders });
@@ -4329,7 +4350,7 @@
                 const img = formatImageUrl(it.image);
                 const lvl = it.qty === 0 ? 'out' : it.qty <= LOW_STOCK ? 'low' : '';
                 const pct = Math.max(4, Math.round(it.qty / maxQ * 100));
-                return `<div class="best-card" data-bestgo="${index}" style="--vc:${it.color}; animation-delay:${-i * 0.9}s">
+                return `<div class="best-card" data-bestgo="${index}" style="animation-delay:${-i * 0.9}s">
                     <div class="best-inner">
                         <span class="best-rank${i < 3 ? ' r' + (i + 1) : ''}">#${i + 1}</span>
                         <span class="best-fire">${i === 0 ? '👑' : '🔥'}</span>
@@ -4337,7 +4358,6 @@
                               : `<div class="best-img" style="display:flex;align-items:center;justify-content:center;font-size:48px">🐟</div>`}
                         <div class="best-name">${escapeHtml(it.variety)}</div>
                         <div class="best-meta">${typeBadge(it.type)}
-                            <span class="size-badge" style="background:${it.color}; color:${textOn(it.color)}; min-width:0; padding:2px 10px; font-size:12px">${escapeHtml(it.size || '-')}</span>
                             ${it.weight ? `<span style="font-size:12px;color:var(--text-muted)">${escapeHtml(it.weight)} กก.</span>` : ''}</div>
                         <div class="best-stats">
                             <div class="best-stat"><b style="color:${lvl === 'out' ? 'var(--danger)' : lvl === 'low' ? 'var(--warning)' : 'var(--success)'}">${fmt(it.qty)}</b><span>คงเหลือ</span></div>
