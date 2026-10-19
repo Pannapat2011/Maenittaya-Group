@@ -1047,7 +1047,27 @@
         }
         tr.search-row.is-best td { background: transparent; }
         .star-btn.on { color: #D9A13B; }
-    </style>
+            .dc-card { border: var(--glass-border); border-left: 4px solid #5865F2; border-radius: var(--radius-lg); padding: 14px 16px 12px; background: var(--glass-bg); margin-bottom: 12px; transition: opacity .2s; }
+        .dc-card.off { opacity: .55; border-left-color: var(--line); }
+        .dc-card label { margin-top: 8px; }
+        .dc-card input { margin-bottom: 8px; }
+        .dc-top { display: flex; align-items: center; gap: 10px; }
+        .dc-ico { width: 38px; height: 38px; border-radius: 10px; background: #5865F2; color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .dc-top .dc-name { margin: 0; font-weight: 700; flex: 1; min-width: 0; }
+        .dc-url { font-family: ui-monospace, Menlo, monospace !important; font-size: 13px !important; }
+        .dc-evs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+        .dc-evs .chip { padding: 6px 11px; font-size: 13px; min-width: 0; }
+        .dc-evs .chip.active { background: #5865F2 !important; border-color: #5865F2 !important; color: #fff !important; }
+        .dc-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .dc-row .dc-mention { flex: 1; min-width: 160px; margin: 0; }
+        .dc-row .btn { width: auto; }
+        .dc-empty { text-align: center; padding: 20px; border: 1px dashed var(--line); border-radius: var(--radius-lg); color: var(--text-muted); background: var(--glass-bg); margin-bottom: 12px; }
+        .dc-help { font-size: 13px; color: var(--text-muted); margin: 0 0 12px 2px; }
+        .dc-help summary { cursor: pointer; color: var(--primary); font-weight: 600; }
+        .dc-help ol { margin: 8px 0 0; padding-left: 20px; line-height: 1.8; }
+        .dc-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        @media (max-width: 640px) { .dc-actions { grid-template-columns: 1fr; } }
+</style>
 </head>
 <body>
     <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -1431,6 +1451,20 @@
             <div class="sec-list" id="sec-list"></div>
             <button class="btn btn-outline" style="margin-bottom: 6px;" onclick="showPage('attendance', menuBtn('attendance'))">📸 เปิดระบบสแกนลงเวลาเข้า-ออกงาน</button>
 
+            <div class="section-title">🔔 แจ้งเตือน Discord</div>
+            <details class="dc-help"><summary>วิธีเอาลิงก์ Webhook จาก Discord</summary>
+                <ol><li>เปิดห้องแชทใน Discord ที่ต้องการ → ⚙️ แก้ไขช่อง (Edit Channel)</li>
+                <li>การเชื่อมต่อ (Integrations) → Webhooks → New Webhook</li>
+                <li>กด <b>Copy Webhook URL</b> แล้วนำมาวางในช่องด้านล่าง → กด 🧪 ทดสอบ → 💾 บันทึก</li></ol>
+                ส่งไปหลายห้องได้ เช่น ห้องออเดอร์รับแจ้งออเดอร์ใหม่จากหน้าร้าน ห้องคลังรับแจ้งรับเข้า/เบิกออก ห้อง HR รับแจ้งลงเวลา</details>
+            <div id="dc-err" class="hint-box" style="display:none; text-align:left; background:rgba(239,68,68,.08); color:var(--danger)"></div>
+            <div id="dc-list"></div>
+            <div class="dc-actions">
+                <button class="btn btn-outline" id="dc-add" onclick="Dc.add()">＋ เพิ่ม Webhook</button>
+                <button class="btn btn-primary" id="dc-save" onclick="Dc.save()" disabled>💾 บันทึกการตั้งค่า Discord</button>
+            </div>
+            <div id="dc-dirty" style="display:none; margin-top:8px; text-align:right; font-size:13px; color:var(--text-muted)">มีการแก้ไขที่ยังไม่บันทึก · <a href="#" onclick="event.preventDefault(); Dc.discard()">ยกเลิกการแก้ไข</a></div>
+
             <div style="display:none">
             <div class="section-title">🎨 สีประจำชนิดสินค้า</div>
             <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 12px 5px;">กดที่ชนิดสินค้าเพื่อเปลี่ยนสี — สีจะเปลี่ยนทั้งในเว็บและในชีท Google ทุกไซส์</p>
@@ -1697,8 +1731,8 @@
     let LOW_STOCK = 5;
     const LS = { data: 'shp_inventory_cache_v3', token: 'shp_token', user: 'shp_user', dark: 'shp_dark', hasFace: 'shp_has_face' };
     const SECURE_LABELS = { edit: 'แก้ไขข้อมูลสินค้า', delete: 'ลบสินค้า', closeday: 'ปิดยอดประจำวัน',
-        faceEnrollSelf: 'ตั้งค่าใบหน้า', faceUnlinkSelf: 'ปิดการใช้ใบหน้า' };
-    let SECURE = { actions: ['edit', 'delete', 'closeday', 'faceEnrollSelf', 'faceUnlinkSelf'], issueQty: 50, elevateSec: 120 };
+        faceEnrollSelf: 'ตั้งค่าใบหน้า', faceUnlinkSelf: 'ปิดการใช้ใบหน้า', discordSave: 'แก้ไขการแจ้งเตือน Discord' };
+    let SECURE = { actions: ['edit', 'delete', 'closeday', 'faceEnrollSelf', 'faceUnlinkSelf', 'discordSave'], issueQty: 50, elevateSec: 120 };
     let elevatedUntil = 0, faceMeInfo = null;
     let hasFace = lsGet('shp_has_face') === '1';
     const NO_IMG = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" rx="18" fill="#E2E8F0"/><text x="50" y="64" font-size="42" text-anchor="middle">🐟</text></svg>');
@@ -2406,7 +2440,7 @@
         if (pageId === 'dashboard') updateDashboard();
         if (pageId === 'daily-summary') updateDailyBarChart();
         if (pageId === 'receive') builderRefresh('in');
-        if (pageId === 'settings') loadFaceMe();
+        if (pageId === 'settings') { loadFaceMe(); Dc.load(); }
         if (pageId === 'orders') Orders.load();
         if (pageId === 'attendance') Att.open(); else Att.close();
         closeScanner(); closePrintModal(); closeNotiModal();
@@ -4496,6 +4530,127 @@
             btn.disabled = false; btn.textContent = 'บันทึกโลโก้';
         }
     }
+
+    /* ================= 🔔 แจ้งเตือน Discord ================= */
+    const Dc = (() => {
+        let hooks = [], events = {}, max = 10, loaded = false, dirty = false, seqN = 0;
+        const esc = escapeHtml;
+        const DEFAULT_EV = ['ORDER', 'IN', 'OUT', 'LOW', 'ADJ', 'DEL', 'CLOSE'];
+        const EV_ICON = { ORDER: '🛒', IN: '📥', OUT: '📤', LOW: '⚠️', ADJ: '✏️', DEL: '🗑️', CLOSE: '📊', FACE: '🕒' };
+
+        async function load() {
+            const box = $('dc-list');
+            if (dirty) return;
+            if (!loaded) box.innerHTML = '<div class="empty-note">กำลังโหลด <span class="loading-dots"></span></div>';
+            try {
+                const r = await api('discordGet');
+                if (r.status !== 'success') throw new Error(r.message || '');
+                hooks = r.hooks.map(h => ({ ...h, url: '' })); events = r.events || {}; max = r.max || 10; loaded = true;
+                const er = $('dc-err');
+                er.style.display = r.lastError ? '' : 'none';
+                er.textContent = r.lastError ? '⚠️ ส่ง Discord ไม่สำเร็จล่าสุด: ' + r.lastError + ' — ลองกด 🧪 ทดสอบ ถ้ายังไม่ได้ให้ Run ฟังก์ชัน authorize ใน Apps Script' : '';
+                render();
+            } catch (e) {
+                if (e.message !== 'AUTH') box.innerHTML = `<div class="empty-note">⚠️ โหลดไม่สำเร็จ ${esc(e.message)} — ตรวจว่าอัปเดต Code.gs เวอร์ชันล่าสุดแล้ว</div>`;
+            }
+        }
+
+        function setDirty(v) { dirty = v; $('dc-save').disabled = !v; $('dc-dirty').style.display = v ? '' : 'none'; }
+
+        function render() {
+            const box = $('dc-list');
+            box.innerHTML = hooks.length ? hooks.map((h, i) => `
+                <div class="dc-card${h.on ? '' : ' off'}">
+                    <div class="dc-top">
+                        <span class="dc-ico">🔔</span>
+                        <input class="dc-name" data-i="${i}" data-f="name" value="${esc(h.name)}" placeholder="ชื่อช่อง เช่น ห้องออเดอร์" maxlength="40">
+                        <label class="tgl" title="${h.on ? 'เปิดอยู่' : 'ปิดอยู่'}"><input type="checkbox" data-i="${i}" data-f="on" ${h.on ? 'checked' : ''}><span></span></label>
+                    </div>
+                    <label>ลิงก์ Webhook</label>
+                    <input data-i="${i}" data-f="url" value="${esc(h.url)}" autocomplete="off" spellcheck="false" class="dc-url"
+                        placeholder="${h.masked ? '✅ ตั้งไว้แล้ว: ' + esc(h.masked) + ' (วางลิงก์ใหม่เพื่อเปลี่ยน)' : 'https://discord.com/api/webhooks/…'}">
+                    <label>แจ้งเตือนเรื่อง</label>
+                    <div class="dc-evs">${Object.keys(events).map(k => `<button type="button" class="chip${h.events.includes(k) ? ' active' : ''}" data-i="${i}" data-ev="${k}">${EV_ICON[k] || ''} ${esc(events[k])}</button>`).join('')}</div>
+                    <div class="dc-row">
+                        <input data-i="${i}" data-f="mention" value="${esc(h.mention || '')}" placeholder="แท็กคน (ไม่บังคับ) เช่น @here" maxlength="40" class="dc-mention">
+                        <button type="button" class="btn btn-outline btn-sm" data-dctest="${i}">🧪 ทดสอบ</button>
+                        <button type="button" class="btn btn-danger-outline btn-sm" data-dcdel="${i}">🗑 ลบ</button>
+                    </div>
+                </div>`).join('')
+                : '<div class="dc-empty"><b>ยังไม่ได้เชื่อม Discord</b><br>กด "＋ เพิ่ม Webhook" แล้ววางลิงก์จาก Discord ได้เลย</div>';
+            $('dc-add').disabled = hooks.length >= max;
+        }
+
+        function add() {
+            if (hooks.length >= max) return;
+            hooks.push({ id: 'n' + Date.now().toString(36) + (++seqN), name: hooks.length ? 'Discord ' + (hooks.length + 1) : 'Discord หลัก', url: '', masked: '', on: true, events: DEFAULT_EV.slice(), mention: '', isNew: true });
+            render(); setDirty(true);
+            const cards = $('dc-list').querySelectorAll('.dc-url');
+            const last = cards[cards.length - 1];
+            if (last) { last.scrollIntoView({ behavior: 'smooth', block: 'center' }); last.focus(); }
+        }
+
+        const urlOk = u => /^https:\/\/(?:ptb\.|canary\.)?(?:discord|discordapp)\.com\/api\/webhooks\/\d{5,25}\/[\w-]{20,120}$/.test(u);
+
+        async function test(i) {
+            const h = hooks[i]; if (!h) return;
+            const url = norm(h.url);
+            if (url && !urlOk(url)) { showNotification('ลิงก์ไม่ถูกต้อง', 'ต้องเป็นลิงก์ https://discord.com/api/webhooks/…', 'warning'); return; }
+            if (!url && h.isNew) { showNotification('ยังไม่มีลิงก์', 'วางลิงก์ Webhook ก่อนทดสอบ', 'warning'); return; }
+            const b = document.querySelector(`[data-dctest="${i}"]`); if (b) { b.disabled = true; b.textContent = 'กำลังส่ง…'; }
+            try {
+                const r = await api('discordTest', url ? { url, name: h.name } : { id: h.id });
+                if (r.status === 'success') $('dc-err').style.display = 'none';
+                if (r.status === 'success') showNotification('ส่งสำเร็จ ✅', `ไปดูข้อความทดสอบในห้อง "${h.name}" ได้เลย`, 'success');
+                else showNotification('ทดสอบไม่ผ่าน', r.message || '', 'danger');
+            } catch (e) { if (e.message !== 'AUTH') showNotification('ข้อผิดพลาด', 'การเชื่อมต่อขัดข้อง', 'danger'); }
+            finally { if (b) { b.disabled = false; b.textContent = '🧪 ทดสอบ'; } }
+        }
+
+        async function save() {
+            for (const h of hooks) {
+                h.url = norm(h.url); h.name = norm(h.name);
+                if (!h.url && h.isNew) { showNotification('ยังไม่มีลิงก์', `"${h.name || 'Webhook ใหม่'}" ยังไม่ได้วางลิงก์`, 'warning'); return; }
+                if (h.url && !urlOk(h.url)) { showNotification('ลิงก์ไม่ถูกต้อง', `"${h.name}" ต้องเป็นลิงก์ https://discord.com/api/webhooks/…`, 'warning'); return; }
+                if (h.on && !h.events.length) { showNotification('ยังไม่ได้เลือกเรื่อง', `"${h.name}" ยังไม่ได้เลือกว่าจะแจ้งเตือนเรื่องอะไร`, 'warning'); return; }
+            }
+            const btn = $('dc-save'); btn.disabled = true; btn.innerHTML = 'กำลังบันทึก <span class="loading-dots"></span>';
+            try {
+                const r = await api('discordSave', { hooks: hooks.map(h => ({ id: h.id, name: h.name, url: h.url, on: h.on, events: h.events, mention: norm(h.mention) })) });
+                if (r.status === 'success') {
+                    hooks = r.hooks.map(h => ({ ...h, url: '' })); setDirty(false); render();
+                    showNotification('บันทึกแล้ว ✅', hooks.length ? `ตั้งค่า Discord ${hooks.length} ห้องเรียบร้อย` : 'ปิดการแจ้งเตือน Discord แล้ว', 'success');
+                } else if (r.status !== 'cancelled') showNotification('บันทึกไม่สำเร็จ', r.message || '', 'danger');
+            } catch (e) { if (e.message !== 'AUTH') showNotification('ข้อผิดพลาด', 'การเชื่อมต่อขัดข้อง', 'danger'); }
+            finally { btn.innerHTML = '💾 บันทึกการตั้งค่า Discord'; btn.disabled = !dirty; }
+        }
+
+        function discard() { setDirty(false); loaded = false; load(); }
+
+        document.addEventListener('input', e => {
+            const t = e.target; if (!t.closest || !t.closest('#dc-list') || !t.dataset.f) return;
+            const h = hooks[Number(t.dataset.i)]; if (!h) return;
+            h[t.dataset.f] = t.type === 'checkbox' ? t.checked : t.value;
+            if (t.dataset.f === 'on') t.closest('.dc-card').classList.toggle('off', !t.checked);
+            setDirty(true);
+        });
+        document.addEventListener('click', e => {
+            const ev = e.target.closest('#dc-list [data-ev]');
+            if (ev) {
+                const h = hooks[Number(ev.dataset.i)], k = ev.dataset.ev;
+                h.events = h.events.includes(k) ? h.events.filter(x => x !== k) : [...h.events, k];
+                ev.classList.toggle('active'); setDirty(true); return;
+            }
+            const t = e.target.closest('[data-dctest]'); if (t) { test(Number(t.dataset.dctest)); return; }
+            const d = e.target.closest('[data-dcdel]');
+            if (d) {
+                const h = hooks[Number(d.dataset.dcdel)];
+                if (h && confirm(`ลบ Webhook "${h.name}"?\n(มีผลเมื่อกดบันทึก)`)) { hooks.splice(Number(d.dataset.dcdel), 1); render(); setDirty(true); }
+            }
+        });
+        return { load, add, save, discard };
+    })();
+    window.Dc = Dc;
 
     boot();
     </script>
